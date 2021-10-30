@@ -37,25 +37,19 @@ win_log() {
 }
 
 #
-# Copy module
+# Copy package
 #
-win_copy_module() {
-	win_log "Importing ${1}"
-
-	mkdir -p "${BUILDROOT}/bin"
-
-	cp "${1}" "${BUILDROOT}/bin"
-	if [ "$?" != "0" ]; then
-		win_abend "Can't copy ${1}"
-	fi
+win_copy_package() {
+	
+	win_log "Importing package ${1}"
 
 	FILES=$(mktemp)
-	rpm -ql $(rpm -qf "${1}") | grep -v "${1}" | grep "${MINGWPREFIX}" | sed -e "s|${MINGWPREFIX}||g" > ${FILES}
+	rpm -ql "${1}" | grep -v "${1}" | grep "${MINGWPREFIX}" | sed -e "s|${MINGWPREFIX}||g" > ${FILES}
 
 	while read FILE
 	do
 		if [ -f "${MINGWPREFIX}${FILE}" ]; then
-			echo "Importing ${FILE}"			
+			echo "Importing file ${FILE}"			
 			mkdir -p "$(dirname "${BUILDROOT}${FILE}")"
 			cp "${MINGWPREFIX}${FILE}" "${BUILDROOT}${FILE}"
 			if [ "$?" != "0" ]; then
@@ -66,7 +60,33 @@ win_copy_module() {
 
 	rm -f ${FILES}
 
-#	rpm -q --requires $(rpm -qf "${1}")
+}
+
+#
+# Copy module
+#
+win_copy_module() {
+	win_log "Importing file ${1}"
+
+	mkdir -p "${BUILDROOT}/bin"
+
+	cp "${1}" "${BUILDROOT}/bin"
+	if [ "$?" != "0" ]; then
+		win_abend "Can't copy ${1}"
+	fi
+
+	win_copy_package "$(rpm -qf "${1}")"
+
+	EXTRAPACKAGES=$(mktemp)
+	rpm -q --requires $(rpm -qf "${1}") | grep 'lang' | cut -d' ' -f1 > "${EXTRAPACKAGES}"
+	rpm -q --requires $(rpm -qf "${1}") | grep 'data' | cut -d' ' -f1 >> "${EXTRAPACKAGES}"
+
+	while read PACKAGE
+	do
+		win_copy_package "${PACKAGE}"
+	done < ${EXTRAPACKAGES}
+
+	rm -f "${EXTRAPACKAGES}"
 }
 
 #
