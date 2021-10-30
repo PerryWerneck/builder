@@ -42,7 +42,9 @@ win_log() {
 win_copy_module() {
 	win_log "Importing ${1}"
 
-	cp "${1}" "${BUILDROOT}"
+	mkdir -p "${BUILDROOT}/bin"
+
+	cp "${1}" "${BUILDROOT}/bin"
 	if [ "$?" != "0" ]; then
 		win_abend "Can't copy ${1}"
 	fi
@@ -52,8 +54,6 @@ win_copy_module() {
 
 	while read FILE
 	do
-		echo ${FILE} | sed -s "s|^bin/||g"
-
 		if [ -f "${MINGWPREFIX}${FILE}" ]; then
 			echo "Importing ${FILE}"			
 			mkdir -p "$(dirname "${BUILDROOT}${FILE}")"
@@ -73,8 +73,6 @@ win_copy_module() {
 # Install application
 #
 win_install_application() {
-
-	mkdir -p "${BUILDROOT}"
 
 	FILENAME="${1}"
 	if [ ! -e "${FILENAME}" ]; then
@@ -102,8 +100,8 @@ win_install_modules() {
 		SOURCES=$(mktemp)
 		REQUIRES=$(mktemp)
 
-		find "${BUILDROOT}" -iname "*.dll" >	"${SOURCES}"
-		find "${BUILDROOT}" -iname "*.exe" >>	"${SOURCES}"
+		find "${BUILDROOT}/bin" -iname "*.dll" >	"${SOURCES}"
+		find "${BUILDROOT}/bin" -iname "*.exe" >>	"${SOURCES}"
 
 		while read FILENAME
 		do
@@ -174,17 +172,12 @@ win_install_modules() {
 		while read FILENAME
 		do
 
-			if [ ! -e "${BUILDROOT}/${FILENAME}" ]; then
+			if [ ! -e "${BUILDROOT}/bin/${FILENAME}" ]; then
 
 				if [ -e "${MINGWPREFIX}/bin/${FILENAME}" ]; then
 
 					AGAIN=1
 					win_copy_module "${MINGWPREFIX}/bin/${FILENAME}"
-
-				elif [ -e ${MINGWPREFIX}/lib/${FILENAME} ]; then
-
-					AGAIN=1
-					win_copy_module "${MINGWPREFIX}/lib/${FILENAME}"
 
 				else 
 
