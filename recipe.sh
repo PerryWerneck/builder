@@ -9,12 +9,11 @@ BUILDDIR="/tmp/recipe/build"
 BUILDROOT="/tmp/recipe/root"
 MINGWPREFIX="/usr/x86_64-w64-mingw32/sys-root/mingw"
 
-mkdir -p "${BUILDDIR}"
-mkdir -p "${BUILDROOT}"
-
 #
 # Setup
 #
+mkdir -p "${BUILDDIR}"
+mkdir -p "${BUILDROOT}"
 export LANG=C
 
 #
@@ -38,6 +37,39 @@ win_log() {
 }
 
 #
+# Copy module
+#
+win_copy_module() {
+	win_log "Importing ${1}"
+
+	cp "${1}" "${BUILDROOT}"
+	if [ "$?" != "0" ]; then
+		win_abend "Can't copy ${1}"
+	fi
+
+	FILES=$(mktemp)
+	rpm -ql $(rpm -qf "${1}") | grep -v "${1}" | grep "${MINGWPREFIX}" | sed -e "s|${MINGWPREFIX}||g" > ${FILES}
+
+	while read FILE
+	do
+		echo ${FILE} | sed -s "s|^bin/||g"
+
+		if [ -f "${MINGWPREFIX}${FILE}" ]; then
+			echo "Importing ${FILE}"			
+			mkdir -p "$(dirname "${BUILDROOT}${FILE}")"
+			cp "${MINGWPREFIX}${FILE}" "${BUILDROOT}${FILE}"
+			if [ "$?" != "0" ]; then
+				win_abend "Can't copy ${FILE}"
+			fi
+		fi
+	done < ${FILES}
+
+	rm -f ${FILES}
+
+#	rpm -q --requires $(rpm -qf "${1}")
+}
+
+#
 # Install application
 #
 win_install_application() {
@@ -53,10 +85,7 @@ win_install_application() {
 		win_abend "Can't find ${1}"
 	fi
 
-	cp "${FILENAME}" "${BUILDROOT}"
-	if [ "$?" != "0" ]; then
-		win_abend "Can't copy ${FILENAME}"
-	fi
+	win_copy_module "${FILENAME}"
 
 }
 
@@ -144,39 +173,24 @@ win_install_modules() {
 		AGAIN=0
 		while read FILENAME
 		do
+
 			if [ ! -e "${BUILDROOT}/${FILENAME}" ]; then
 
-				COUNT=$(find "${BUILDROOT}" -iname ${FILENAME} | wc --lines)
-				if [ "${COUNT}" == "0" ]; then
+				if [ -e "${MINGWPREFIX}/bin/${FILENAME}" ]; then
 
-					if [ -e "${MINGWPREFIX}/bin/${FILENAME}" ]; then
+					AGAIN=1
+					win_copy_module "${MINGWPREFIX}/bin/${FILENAME}"
 
-						win_log "Importing ${MINGWPREFIX}/bin/${FILENAME}"
+				elif [ -e ${MINGWPREFIX}/lib/${FILENAME} ]; then
 
-						AGAIN=1
-						cp "${MINGWPREFIX}/bin/${FILENAME}" "${BUILDROOT}"
-						if [ "$?" != "0" ]; then
-							win_abend "Can't copy ${MINGWPREFIX}/bin/${FILENAME}"
-						fi
+					AGAIN=1
+					win_copy_module "${MINGWPREFIX}/lib/${FILENAME}"
 
-					elif [ -e ${MINGWPREFIX}/lib/${FILENAME} ]; then
+				else 
 
-						win_log "Importing ${MINGWPREFIX}/lib/${FILENAME}"
-
-						AGAIN=1
-						cp "${MINGWPREFIX}/lib/${FILENAME}" "${BUILDROOT}"
-						if [ "$?" != "0" ]; then
-							win_abend "Can't copy ${MINGWPREFIX}/lib/${FILENAME}"
-						fi
-
-					else 
-
-						win_abend "Can't find ${FILENAME}"
-
-					fi
+					win_abend "Can't find ${FILENAME}"
 
 				fi
-
 
 			fi
 
