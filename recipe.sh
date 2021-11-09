@@ -20,10 +20,11 @@
 
 
 #
-# Configuration - Will be moved to a .conf?
+# Configuration - First set defaults, then, load conf
 #
 BUILDDIR="/tmp/recipe/build"
 BUILDROOT="/tmp/recipe/root"
+NSIS_ARGS="-inputcharset UTF8 -DPACKAGE_VERSION=$(date +%-y.%-m.%-d.%-H)"
 
 . ./recipe.conf
 
@@ -237,8 +238,29 @@ win_install_modules() {
 
 MINGWPREFIX="/usr/x86_64-w64-mingw32/sys-root/mingw"
 cleanup
-win_install_application "${APPMAIN}"
+
+if [ ! -z ${APPMAIN} ]; then
+	win_install_application "${APPMAIN}"
+fi
+
+if [ ! -z ${APPPACKAGES} ]; then
+
+	for PACKAGE in ${APPPACKAGES}
+	do
+		win_copy_package "${PACKAGE}"
+	done
+
+fi
+
 win_install_modules
 
-
+for NSI in *.nsi
+do
+	cp "${NSI}" "${BUILDROOT}/build.nsi"
+	makensis ${NSIS_ARGS} "${BUILDROOT}/build.nsi"
+	if [ "$?" != "0" ]; then
+		win_abend "Can't build ${NSI}"
+	fi
+	rm -f "${BUILDROOT}/build.nsi"
+done
 

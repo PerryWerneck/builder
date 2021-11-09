@@ -31,9 +31,9 @@ XPStyle on
 installDir "$PROGRAMFILES64\pw3270"
 
 #define the installer icon
-!define MUI_ICON "pw3270.ico"
-!define MUI_UNICON "pw3270.ico"
-icon "pw3270.ico"
+!define MUI_ICON "bin/pw3270.ico"
+!define MUI_UNICON "bin/pw3270.ico"
+icon "bin/pw3270.ico"
 
 # Get installation folder from registry if available
 InstallDirRegKey HKLM "Software\pw3270" "InstallLocation"
@@ -57,7 +57,7 @@ VIAddVersionKey "LegalCopyright" "(C) 2017 Banco do Brasil S/A. All Rights Reser
 
 !define MUI_ABORTWARNING
 # !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "LICENSE"
+#!insertmacro MUI_PAGE_LICENSE "LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -78,7 +78,7 @@ SubSection "pw3270" SecMain
 
 	Section "Core" SecCore
 
-		SetRegView @WINARCH@
+		SetRegView 64
 		${DisableX64FSRedirection}
 
 		# define the output path for this file
@@ -107,7 +107,7 @@ SubSection "pw3270" SecMain
 		CreateDirectory "$INSTDIR\schemas"
 		file "/oname=$INSTDIR\schemas\pw3270-application.gschema.xml"		"share\glib-2.0\schemas\pw3270-application.gschema.xml"
 		file "/oname=$INSTDIR\schemas\pw3270-window.gschema.xml"		"share\glib-2.0\schemas\pw3270-window.gschema.xml"
-		file "/oname=$INSTDIR\gschemas.compiled"				"share\glib-2.0\schemas\gschemas.compiled"
+		#file "/oname=$INSTDIR\gschemas.compiled"				"share\glib-2.0\schemas\gschemas.compiled"
 
 		# Configuration files
 		file "/oname=$INSTDIR\colors.conf"					"share\pw3270\colors.conf"
@@ -158,7 +158,7 @@ SubSection "pw3270" SecMain
 			         "NoRepair" "1"
 
 		# Default settings
-		SetRegView @WINARCH@
+		SetRegView @64@
 
 		# Setup log file
 		# https://docs.microsoft.com/en-us/windows/win32/eventlog/event-sources
@@ -285,7 +285,7 @@ SubSection "pw3270" SecMain
 		file "/oname=$INSTDIR\sdk\def\libipc3270.def"		"share\pw3270\def\libipc3270.def"
 		file "/oname=$INSTDIR\sdk\def\libhllapi.def"		"share\pw3270\def\libhllapi.def"
 
-		SetRegView @WINARCH@
+		SetRegView @64@
 		WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PW3270_SDK_PATH" "$INSTDIR\sdk"
 		SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
@@ -324,7 +324,7 @@ Section "Uninstall"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\pw3270"
 	DeleteRegKey HKLM "Software\pw3270"
 	
-	SetRegView @WINARCH@
+	SetRegView @64@
 	DeleteRegKey HKLM "Software\pw3270"
 	DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PW3270_SDK_PATH"
 	DeleteRegKey HKLM "SYSTEM\CurrentControlSet\Services\EventLog\pw3270"
