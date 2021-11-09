@@ -243,7 +243,7 @@ if [ ! -z ${APPMAIN} ]; then
 	win_install_application "${APPMAIN}"
 fi
 
-if [ ! -z ${APPPACKAGES} ]; then
+if [ ! -z "${APPPACKAGES}" ]; then
 
 	for PACKAGE in ${APPPACKAGES}
 	do
