@@ -24,7 +24,7 @@
 
 Name "pw3270"
 Caption "pw3270 - IBM 3270 Terminal emulator"
-outfile "pw3270-5.4.21.11-gtk-@GTK_MODVERSION@-x86_64.exe"
+outfile "pw3270-5.4.21.11-x86_64.exe"
 
 XPStyle on
 
@@ -132,9 +132,9 @@ SubSection "pw3270" SecMain
 
 		# Locale files
 		#CreateDirectory "$INSTDIR\locale\pt_BR\LC_MESSAGES"
-		#file "oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\@PACKAGE_NAME@.mo"		"share\locale\pt_BR\LC_MESSAGES\pw3270.mo"
-		#file "/oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\lib@LIBRARY_NAME@-5.4.mo"	"share\locale\pt_BR\LC_MESSAGES\lib3270-5.4.mo"
-		#file "/oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\libv3270-5.4.mo"		"share\locale\pt_BR\LC_MESSAGES\libv3270-5.4.mo"
+		#file "oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\pw3270.mo"		"share\locale\pt_BR\LC_MESSAGES\pw3270.mo"
+		#file "/oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\lib3270-5.4.mo"	"share\locale\pt_BR\LC_MESSAGES\lib3270-5.4.mo"
+		#file "/oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\libv3270-5.4.mo"	"share\locale\pt_BR\LC_MESSAGES\libv3270-5.4.mo"
 
 		# define uninstaller name
 		SetRegView 32
@@ -158,12 +158,12 @@ SubSection "pw3270" SecMain
 			         "NoRepair" "1"
 
 		# Default settings
-		SetRegView @64@
+		SetRegView 64
 
 		# Setup log file
 		# https://docs.microsoft.com/en-us/windows/win32/eventlog/event-sources
 		WriteRegStr HKLM "SYSTEM\CurrentControlSet\Services\EventLog\pw3270" \
-				 "PackageVersion"	"@PACKAGE_VERSION@"
+				 "PackageVersion"	"5.4"
 
 		# Required for IPC Library.
 		WriteRegStr 	HKLM	"Software\pw3270"				"InstallLocation"	"$INSTDIR"
@@ -223,7 +223,6 @@ SubSection "pw3270" SecMain
 #			CreateDirectory "$INSTDIR\locale\pt_BR\LC_MESSAGES"
 #			file "/oname=$INSTDIR\locale\pt_BR\LC_MESSAGES\libipc3270-5.4.mo"	"share\locale\pt_BR\LC_MESSAGES\libipc3270-5.4.mo"
 #
-#			${@NSISREDIR@}
 #			file "/oname=$SYSDIR\libipc3270.dll"				"bin\libipc3270.dll"
 #
 #		sectionEnd
@@ -236,7 +235,7 @@ SubSection "pw3270" SecMain
 !ifdef WITHLIBHLLAPI
 		Section "HLLAPI" HLLAPIBinding
 
-			${@NSISREDIR@}
+			${DisableX64FSRedirection}
 
 			# Install HLLAPI connector
 			file "/oname=$SYSDIR\hllapi.dll"		"bin\libhllapi.dll"
@@ -270,9 +269,9 @@ SubSection "pw3270" SecMain
 		CreateDirectory "$INSTDIR\sdk\def"
 		CreateDirectory "$INSTDIR\sdk\lib"
 
-		file "/oname=$INSTDIR\sdk\lib\lib3270.dll.a"		"lib\lib@LIBRARY_NAME@.dll.a"
-		file "/oname=$INSTDIR\sdk\lib\lib3270.delayed.a"	"lib\lib@LIBRARY_NAME@.delayed.a"
-		file "/oname=$INSTDIR\sdk\lib\lib3270.static.a"	"lib\lib@LIBRARY_NAME@.static.a"
+		file "/oname=$INSTDIR\sdk\lib\lib3270.dll.a"		"lib\lib3270.dll.a"
+		file "/oname=$INSTDIR\sdk\lib\lib3270.delayed.a"	"lib\lib3270.delayed.a"
+		file "/oname=$INSTDIR\sdk\lib\lib3270.static.a"	"lib\lib3270.static.a"
 		file "/oname=$INSTDIR\sdk\lib\libv3270.dll.a"		"lib\libv3270.dll.a"
 		file "/oname=$INSTDIR\sdk\lib\libipc3270.dll.a"	"lib\libipc3270.dll.a"
 		file "/oname=$INSTDIR\sdk\lib\libipc3270.static.a"	"lib\libipc3270.static.a"
@@ -280,12 +279,12 @@ SubSection "pw3270" SecMain
 
 		file "/oname=$INSTDIR\sdk\lib3270.mak"			"share\pw3270\def\lib3270.mak"
 
-		file "/oname=$INSTDIR\sdk\def\lib@LIBRARY_NAME@.def"	"share\pw3270\def\lib@LIBRARY_NAME@.def"
+		file "/oname=$INSTDIR\sdk\def\lib3270.def"		"share\pw3270\def\lib3270.def"
 		file "/oname=$INSTDIR\sdk\def\libv3270.def"		"share\pw3270\def\libv3270.def"
 		file "/oname=$INSTDIR\sdk\def\libipc3270.def"		"share\pw3270\def\libipc3270.def"
 		file "/oname=$INSTDIR\sdk\def\libhllapi.def"		"share\pw3270\def\libhllapi.def"
 
-		SetRegView @64@
+		SetRegView 64
 		WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PW3270_SDK_PATH" "$INSTDIR\sdk"
 		SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
@@ -324,17 +323,17 @@ Section "Uninstall"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\pw3270"
 	DeleteRegKey HKLM "Software\pw3270"
 	
-	SetRegView @64@
+	SetRegView 64
 	DeleteRegKey HKLM "Software\pw3270"
 	DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PW3270_SDK_PATH"
 	DeleteRegKey HKLM "SYSTEM\CurrentControlSet\Services\EventLog\pw3270"
 
 	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
-	DeleteRegKey HKLM "Software\GSettings\apps\@PACKAGE_NAME@\pw3270"
+	DeleteRegKey HKLM "Software\GSettings\apps\pw3270\pw3270"
 
 	# Delete System libraries
-	${@NSISREDIR@}
+	${DisableX64FSRedirection}
 
 	delete $SYSDIR\libipc3270.dll
 
