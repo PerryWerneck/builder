@@ -57,7 +57,7 @@ VIAddVersionKey "LegalCopyright" "(C) 2017 Banco do Brasil S/A. All Rights Reser
 
 !define MUI_ABORTWARNING
 # !insertmacro MUI_PAGE_WELCOME
-#!insertmacro MUI_PAGE_LICENSE "LICENSE"
+!insertmacro MUI_PAGE_LICENSE "LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES

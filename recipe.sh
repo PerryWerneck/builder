@@ -252,6 +252,19 @@ if [ ! -z "${APPPACKAGES}" ]; then
 
 fi
 
+FILESTOCOPY="${LICENSE} ${EXTRAFILES}"
+if [ ! -z "${FILESTOCOPY}" ]; then
+
+	for FILETOCOPY in ${FILESTOCOPY}
+	do
+		cp "${FILETOCOPY}" "${BUILDROOT}"
+		if [ "$?" != "0" ]; then
+			win_abend "Can't copy ${FILETOCOPY}"
+		fi
+	done
+
+fi
+
 win_install_modules
 
 for NSI in *.nsi
