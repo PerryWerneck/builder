@@ -1,0 +1,58 @@
+#################################################################
+#
+# Win32 specific functions.
+#
+# Author: Perry Werneck <perry.werneck@gmail.com>
+#
+################################################################
+#
+# Copyright (c) 2022 Perry Werneck <perry.werneck@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or 3 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program (see the file COPYING); if not, write to the
+# Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#
+################################################################
+
+recipe_setup_win32() {
+
+
+}
+
+recipe_prepare_win32() {
+    :
+}
+
+# Variables:
+# $BUILD_ROOT is the chroot
+# $TOPDIR/SOURCES includes the win32 sources
+# $RECIPEFILE the name of the config file
+
+recipe_build_win32() {
+
+
+}
+
+recipe_resultdirs_win32() {
+    :
+}
+
+recipe_cleanup_win32() {
+    :
+}
+
+# Local Variables:
+# mode: Shell-script
+# End:
+
+
