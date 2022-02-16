@@ -24,22 +24,239 @@
 #
 ################################################################
 
+# Variables:
+# $BUILD_ROOT is the chroot
+# $TOPDIR/SOURCES includes the win32 sources
+# $RECIPEFILE the name of the config file
+
 recipe_setup_win32() {
-
-
+	:
 }
 
 recipe_prepare_win32() {
     :
 }
 
-# Variables:
-# $BUILD_ROOT is the chroot
-# $TOPDIR/SOURCES includes the win32 sources
-# $RECIPEFILE the name of the config file
+recipe_module_install_package() {
+
+	echo "Installing ${1}"
+
+	FILES=$(mktemp)
+	rpm -ql "${1}" | grep -v "${1}" | grep "${WIN32PREFIX}" | sed -e "s|${WIN32PREFIX}||g" > ${FILES}
+
+	while read FILE
+	do
+		if [ -f "${WIN32PREFIX}${FILE}" ]; then
+			echo "Importing file ${FILE}"			
+			mkdir -p "$(dirname "${BUILD_ROOT}${FILE}")"
+			cp "${WIN32PREFIX}${FILE}" "${BUILD_ROOT}${FILE}"
+			if [ "$?" != "0" ]; then
+				echo "Can't copy ${FILE}"
+				exit -1
+			fi
+		fi
+	done < ${FILES}
+
+	rm -f ${FILES}
+
+}
+
+recipe_module_install_win32() {
+
+	cp "${1}" "${BUILD_ROOT}/bin"
+	if [ "$?" != "0" ]; then
+		echo "Can't copy ${1}"
+		exit -1
+	fi
+
+	recipe_module_install_package "$(rpm -qf "${1}")"
+
+	EXTRAPACKAGES=$(mktemp)
+	rpm -q --requires $(rpm -qf "${1}") | grep 'lang' | cut -d' ' -f1 > "${EXTRAPACKAGES}"
+	rpm -q --requires $(rpm -qf "${1}") | grep 'data' | cut -d' ' -f1 >> "${EXTRAPACKAGES}"
+
+	while read PACKAGE
+	do
+		recipe_module_install_package "${PACKAGE}"
+	done < ${EXTRAPACKAGES}
+
+	rm -f "${EXTRAPACKAGES}"
+
+}
+
+recipe_modules_win32() {
+
+	echo "Importing modules"
+	
+	AGAIN=1
+	until [  $AGAIN = 0 ]; do
+
+		SOURCES=$(mktemp)
+		REQUIRES=$(mktemp)
+
+		find "${BUILD_ROOT}" -iname "*.dll" >	"${SOURCES}"
+		find "${BUILD_ROOT}" -iname "*.exe" >>	"${SOURCES}"
+		
+		while read FILENAME
+		do
+			LANG=C objdump -p ${FILENAME} | grep "DLL Name:" | cut -d: -f2 | tr "[:upper:]" "[:lower:]" >> ${REQUIRES}
+		done < ${SOURCES}
+
+		libs_to_exclude="
+			advapi32
+			cfgmgr32
+			comctl32
+			comdlg32
+			crypt32
+			d3d8
+			d3d9
+			ddraw
+			dnsapi
+			dsound
+			dwmapi
+			gdi32
+			gdiplus
+			glu32
+			glut32
+			imm32
+			iphlpapi
+			kernel32
+			ksuser
+			mpr
+			mscms
+			mscoree
+			msimg32
+			msvcr71
+			msvcr80
+			msvcr90
+			msvcrt
+			mswsock
+			netapi32
+			odbc32
+			ole32
+			oleacc
+			oleaut32
+			opengl32
+			psapi
+			rpcrt4
+			secur32
+			setupapi
+			shell32
+			shlwapi
+			user32
+			usp10
+			version
+			wininet
+			winmm
+			wldap32
+			ws2_32
+			wsock32
+			winspool.drv
+			ntdll
+			winhttp
+		"
+
+		# Excluo DLLs do sistema
+		for i in $libs_to_exclude; do
+			sed -i -e "/${i}/d" ${REQUIRES}
+		done
+
+		# Search for missing DLLs
+		AGAIN=0
+		while read FILENAME
+		do
+
+			if [ ! -e "${BUILD_ROOT}/bin/${FILENAME}" ]; then
+
+				if [ -e "${WIN32PREFIX}/bin/${FILENAME}" ]; then
+					#
+					# Install module from local MinGW
+					#
+					AGAIN=1
+					recipe_module_install_win32 "${WIN32PREFIX}/bin/${FILENAME}"
+
+				else 
+
+					exit "Can't find ${FILENAME}"
+					exit -1
+
+				fi
+
+			fi
+
+		done < ${REQUIRES}
+
+		rm -f ${SOURCES}
+		rm -f ${REQUIRES}
+
+	done
+
+}
 
 recipe_build_win32() {
 
+	# TODO: Make it configurable.
+	WIN32HOST=x86_64-w64-mingw32
+	WIN32PREFIX="/usr/${WIN32HOST}/sys-root/mingw"
+
+	mkdir -p ${TOPDIR}/BUILD
+	pushd ${TOPDIR}/BUILD
+	
+	if [ -x ${TOPDIR}/SOURCES/autogen.sh ]; then
+		NOCONFIGURE=1 ${TOPDIR}/SOURCES/autogen.sh
+	fi
+
+#  $__mingw64_topdir/configure --cache-file=%{_mingw64_cache} \
+#        --host=%{_mingw64_host} \
+#        --build=%_build \
+#        --target=%{_mingw64_target} \
+#        --prefix=%{_mingw64_prefix} \
+#        --exec-prefix=%{_mingw64_exec_prefix} \
+#        --bindir=%{_mingw64_bindir} \
+#        --sbindir=%{_mingw64_sbindir} \
+#        --sysconfdir=%{_mingw64_sysconfdir} \
+#        --datadir=%{_mingw64_datadir} \
+#        --includedir=%{_mingw64_includedir} \
+#        --libdir=%{_mingw64_libdir} \
+#        --libexecdir=%{_mingw64_libexecdir} \
+#        --localstatedir=%{_mingw64_localstatedir} \
+#        --sharedstatedir=%{_mingw64_sharedstatedir} \
+#        --mandir=%{_mingw64_mandir} \
+ #       --infodir=%{_mingw64_infodir}
+
+	if [ -x ${TOPDIR}/SOURCES/configure ]; then
+		${TOPDIR}/SOURCES/configure \
+			--host=${WIN32HOST} \
+			--prefix=/ \
+			--sbindir=/bin/ \
+			--bindir=/bin/ \
+			--libdir=/bin/
+		if [ "$?" != "0" ]; then
+			exit -1
+		fi
+	fi
+
+	if [ -e Makefile ]; then
+		make all
+		if [ "$?" != "0" ]; then
+			exit -1
+		fi
+	else
+		echo "Cant identify build system"
+		exit -1
+	fi
+	
+	make DESTDIR=${BUILD_ROOT} install
+	if [ "$?" != "0" ]; then
+		exit -1
+	fi
+	
+	popd	
+
+	recipe_modules_win32
+
+	find ${BUILD_ROOT} -type f
+	
 
 }
 
