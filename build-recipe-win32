@@ -37,30 +37,6 @@ recipe_prepare_win32() {
     :
 }
 
-recipe_module_install_package() {
-
-	echo "Installing ${1}"
-
-	FILES=$(mktemp)
-	rpm -ql "${1}" | grep -v "${1}" | grep "${WIN32PREFIX}" | sed -e "s|${WIN32PREFIX}||g" > ${FILES}
-
-	while read FILE
-	do
-		if [ -f "${WIN32PREFIX}${FILE}" ]; then
-			echo "Importing file ${FILE}"			
-			mkdir -p "$(dirname "${BUILD_ROOT}${FILE}")"
-			cp "${WIN32PREFIX}${FILE}" "${BUILD_ROOT}${FILE}"
-			if [ "$?" != "0" ]; then
-				echo "Can't copy ${FILE}"
-				exit -1
-			fi
-		fi
-	done < ${FILES}
-
-	rm -f ${FILES}
-
-}
-
 recipe_build_win32() {
 
 	# TODO: Make it configurable.
