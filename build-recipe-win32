@@ -61,138 +61,6 @@ recipe_module_install_package() {
 
 }
 
-recipe_module_install_win32() {
-
-	cp "${1}" "${BUILD_ROOT}/bin"
-	if [ "$?" != "0" ]; then
-		echo "Can't copy ${1}"
-		exit -1
-	fi
-
-	recipe_module_install_package "$(rpm -qf "${1}")"
-
-	EXTRAPACKAGES=$(mktemp)
-	rpm -q --requires $(rpm -qf "${1}") | grep 'lang' | cut -d' ' -f1 > "${EXTRAPACKAGES}"
-	rpm -q --requires $(rpm -qf "${1}") | grep 'data' | cut -d' ' -f1 >> "${EXTRAPACKAGES}"
-
-	while read PACKAGE
-	do
-		recipe_module_install_package "${PACKAGE}"
-	done < ${EXTRAPACKAGES}
-
-	rm -f "${EXTRAPACKAGES}"
-
-}
-
-recipe_modules_win32() {
-
-	echo "Importing modules"
-	
-	AGAIN=1
-	until [  $AGAIN = 0 ]; do
-
-		SOURCES=$(mktemp)
-		REQUIRES=$(mktemp)
-
-		find "${BUILD_ROOT}" -iname "*.dll" >	"${SOURCES}"
-		find "${BUILD_ROOT}" -iname "*.exe" >>	"${SOURCES}"
-		
-		while read FILENAME
-		do
-			LANG=C objdump -p ${FILENAME} | grep "DLL Name:" | cut -d: -f2 | tr "[:upper:]" "[:lower:]" >> ${REQUIRES}
-		done < ${SOURCES}
-
-		libs_to_exclude="
-			advapi32
-			cfgmgr32
-			comctl32
-			comdlg32
-			crypt32
-			d3d8
-			d3d9
-			ddraw
-			dnsapi
-			dsound
-			dwmapi
-			gdi32
-			gdiplus
-			glu32
-			glut32
-			imm32
-			iphlpapi
-			kernel32
-			ksuser
-			mpr
-			mscms
-			mscoree
-			msimg32
-			msvcr71
-			msvcr80
-			msvcr90
-			msvcrt
-			mswsock
-			netapi32
-			odbc32
-			ole32
-			oleacc
-			oleaut32
-			opengl32
-			psapi
-			rpcrt4
-			secur32
-			setupapi
-			shell32
-			shlwapi
-			user32
-			usp10
-			version
-			wininet
-			winmm
-			wldap32
-			ws2_32
-			wsock32
-			winspool.drv
-			ntdll
-			winhttp
-		"
-
-		# Excluo DLLs do sistema
-		for i in $libs_to_exclude; do
-			sed -i -e "/${i}/d" ${REQUIRES}
-		done
-
-		# Search for missing DLLs
-		AGAIN=0
-		while read FILENAME
-		do
-
-			if [ ! -e "${BUILD_ROOT}/bin/${FILENAME}" ]; then
-
-				if [ -e "${WIN32PREFIX}/bin/${FILENAME}" ]; then
-					#
-					# Install module from local MinGW
-					#
-					AGAIN=1
-					recipe_module_install_win32 "${WIN32PREFIX}/bin/${FILENAME}"
-
-				else 
-
-					exit "Can't find ${FILENAME}"
-					exit -1
-
-				fi
-
-			fi
-
-		done < ${REQUIRES}
-
-		rm -f ${SOURCES}
-		rm -f ${REQUIRES}
-
-	done
-
-}
-
 recipe_build_win32() {
 
 	# TODO: Make it configurable.
@@ -253,8 +121,158 @@ recipe_build_win32() {
 	
 	popd	
 
-	recipe_modules_win32
+	#
+	# Build modules
+	#
+	local libs_to_exclude="
+		advapi32
+		cfgmgr32
+		comctl32
+		comdlg32
+		crypt32
+		d3d8
+		d3d9
+		ddraw
+		dnsapi
+		dsound
+		dwmapi
+		gdi32
+		gdiplus
+		glu32
+		glut32
+		imm32
+		iphlpapi
+		kernel32
+		ksuser
+		mpr
+		mscms
+		mscoree
+		msimg32
+		msvcr71
+		msvcr80
+		msvcr90
+		msvcrt
+		mswsock
+		netapi32
+		odbc32
+		ole32
+		oleacc
+		oleaut32
+		opengl32
+		psapi
+		rpcrt4
+		secur32
+		setupapi
+		shell32
+		shlwapi
+		user32
+		usp10
+		version
+		wininet
+		winmm
+		wldap32
+		ws2_32
+		wsock32
+		winspool.drv
+		ntdll
+		winhttp
+	"
+	
+	local AGAIN=1
+	until [  $AGAIN = 0 ]; do
 
+		AGAIN=0
+
+		local SOURCES=$(mktemp)
+
+		find "${BUILD_ROOT}" -iname "*.dll" >	"${SOURCES}"
+		find "${BUILD_ROOT}" -iname "*.exe" >>	"${SOURCES}"
+
+		local REQUIRES=$(mktemp)
+		while read FILENAME
+		do
+			LANG=C objdump -p ${FILENAME} | grep "DLL Name:" | cut -d: -f2 | tr "[:upper:]" "[:lower:]" >> ${REQUIRES}
+		done < ${SOURCES}
+		rm -f ${SOURCES}
+
+		# Remove system libraries
+		for i in $libs_to_exclude; do
+			sed -i -e "/${i}/d" ${REQUIRES}
+		done
+
+		while read FILENAME
+		do
+			if [ ! -e "${BUILD_ROOT}/bin/${FILENAME}" ]; then
+
+				if [ -e "${WIN32PREFIX}/bin/${FILENAME}" ]; then
+					#
+					# Install module from local MinGW
+					#
+					AGAIN=1
+
+					rpm -qf "${WIN32PREFIX}/bin/${FILENAME}" 2>&1 > /dev/null				
+					if [ "${?}" != "0" ]; then
+						#
+						# No package, just copy the file
+						#
+						echo "Installing ${WIN32PREFIX}/bin/${FILENAME}" 
+						cp "${WIN32PREFIX}/bin/${FILENAME}" "${BUILD_ROOT}/bin"
+						if [ "$?" != "0" ]; then
+							echo "Can't copy ${WIN32PREFIX}/bin/${FILENAME}"
+							exit -1
+						fi
+					else
+						#
+						# It's a package, copy it.
+						#
+						AGAIN=0
+						local DEPENDS=$(mktemp)
+						
+						rpm -qf "${WIN32PREFIX}/bin/${FILENAME}" > "${DEPENDS}"
+						rpm -q --requires "${PACKAGE}" | grep 'lang' | cut -d' ' -f1 >> "${DEPENDS}"
+						rpm -q --requires "${PACKAGE}" | grep 'data' | cut -d' ' -f1 >> "${DEPENDS}"
+						
+						local FILES=$(mktemp)						
+						while read PACKAGE
+						do
+							echo "Loading ${PACKAGE}"
+							rpm -ql "${PACKAGE}" | grep "${WIN32PREFIX}" >> ${FILES}
+						done < ${DEPENDS}
+						rm -f "${DEPENDS}"
+						
+						local FILE
+						while read FILE
+						do
+							local DESTFILE=$(echo "${FILE}" | sed -e "s|${WIN32PREFIX}||g")
+							if [ ! -d ${FILE} ]; then
+								echo "Installing ${FILE}"
+								cp "${FILE}" "${BUILD_ROOT}${DESTFILE}"
+								if [ "$?" != "0" ]; then
+									echo "Cant copy ${FILE}"
+									exit -1
+								fi
+							fi
+						done < ${FILES}
+						rm -f ${FILES}
+						
+					fi
+					
+				else 
+
+					exit "Can't find ${FILENAME}"
+					exit -1
+
+				fi
+
+			fi
+		
+		done < ${REQUIRES}
+		rm -f ${REQUIRES}
+		
+	done
+	#
+	# Finalize
+	#
 	find ${BUILD_ROOT} -type f
 	
 
