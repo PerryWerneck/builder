@@ -261,28 +261,49 @@ recipe_build_win32() {
 	
 	mkdir -p ${TOPDIR}/INSTALLER
 
+	# Sometimes you need files from system or sources
+	ln -s $(readlink -f "${WIN32PREFIX}") "${BUILD_ROOT}/SYSROOT"
+	if [ "$?" != "0" ]; then
+		exit -1
+	fi
+
+	ln -s $(readlink -f "${TOPDIR}/SOURCES") "${BUILD_ROOT}/SOURCES"
+	if [ "$?" != "0" ]; then
+		exit -1
+	fi
+	
+	mkdir "${TOPDIR}/PACKAGE"
+	ln -s $(readlink -f "${TOPDIR}/PACKAGE") "${BUILD_ROOT}/PACKAGE"
+	if [ "$?" != "0" ]; then
+		exit -1
+	fi
+	
 	local NSIFILE
 	while read NSIFILE
 	do
 		echo "Building ${NSIFILE}"
+		pushd ${BUILD_ROOT}
 		makensis \
+				-NOCD \
 				-inputcharset UTF8 \
-				-DBUILDROOT="${BUILD_ROOT}" \
-				-DSRCDIR="${TOPDIR}/SOURCES" \
-				-DPACKAGEDIR="${TOPDIR}/INSTALLER" \
+				-DBUILDROOT=. \
+				-DPKGDIR=PACKAGE \
+				-DSRCDIR=SOURCES \
+				-DSYSROOT=SYSROOT \
 				"${NSIFILE}"
+		
 		if [ "$?" != "0" ]; then
 			echo "Cant build installer"
 			exit -1
 		fi
+		popd
 	done < ${NSIFILES}
 	rm -f ${NSIFILES}
-
-
+			
 }
 
 recipe_resultdirs_win32() {
-    :
+	echo PACKAGE
 }
 
 recipe_cleanup_win32() {
