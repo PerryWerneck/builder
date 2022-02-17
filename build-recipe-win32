@@ -155,7 +155,7 @@ recipe_build_win32() {
 	"
 	
 	local AGAIN=1
-	until [  $AGAIN = 0 ]; do
+	until [  ${AGAIN} == 0 ]; do
 
 		AGAIN=0
 
@@ -178,13 +178,16 @@ recipe_build_win32() {
 
 		while read FILENAME
 		do
+			echo ${FILENAME}
+			
 			if [ ! -e "${BUILD_ROOT}/bin/${FILENAME}" ]; then
 
+				AGAIN=1
+				
 				if [ -e "${WIN32PREFIX}/bin/${FILENAME}" ]; then
 					#
 					# Install module from local MinGW
 					#
-					AGAIN=1
 
 					rpm -qf "${WIN32PREFIX}/bin/${FILENAME}" 2>&1 > /dev/null				
 					if [ "${?}" != "0" ]; then
@@ -201,7 +204,6 @@ recipe_build_win32() {
 						#
 						# It's a package, copy it.
 						#
-						AGAIN=0
 						local DEPENDS=$(mktemp)
 						
 						rpm -qf "${WIN32PREFIX}/bin/${FILENAME}" > "${DEPENDS}"
@@ -246,10 +248,10 @@ recipe_build_win32() {
 		rm -f ${REQUIRES}
 		
 	done
+	
 	#
 	# Finalize
 	#
-	find ${BUILD_ROOT} -type f
 	
 	local NSIFILES=$(mktemp)
 	
