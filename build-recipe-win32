@@ -152,8 +152,48 @@ recipe_build_win32() {
 		winspool.drv
 		ntdll
 		winhttp
+		wtsapi32
 	"
 	
+	#
+	# Install pré-reqs
+	#
+	if [ ! -z "${REQUIRED_PACKAGES}" ]; then
+		local PRE_REQS=(${REQUIRED_PACKAGES})
+		local PACKAGE
+		for PACKAGE in "${PRE_REQS[@]}" 
+		do
+			rpm -q "${PACKAGE}" 2>&1 > /dev/null
+			if [ "$?" != "0" ]; then
+				echo "Package ${PACKAGE} not found."
+				exit -1
+			fi
+			
+			echo "Loading ${PACKAGE}"
+			local FILES=$(mktemp)						
+			rpm -ql "${PACKAGE}" | grep "${WIN32PREFIX}" >> ${FILES}
+			local FILE
+			while read FILE
+			do
+				local DESTFILE=$(echo "${FILE}" | sed -e "s|${WIN32PREFIX}||g")
+				if [ ! -d ${FILE} ]; then
+					echo "Installing ${FILE}"
+					mkdir -p $(dirname "${BUILD_ROOT}${DESTFILE}")
+					cp "${FILE}" "${BUILD_ROOT}${DESTFILE}"
+					if [ "$?" != "0" ]; then
+						echo "Cant copy ${FILE}"
+						exit -1
+					fi
+				fi
+			done < ${FILES}
+			rm -f ${FILES}
+		
+		done
+	fi
+	
+	#
+	# Scan for required libraries
+	#
 	local AGAIN=1
 	until [  ${AGAIN} == 0 ]; do
 
@@ -224,9 +264,19 @@ recipe_build_win32() {
 							local DESTFILE=$(echo "${FILE}" | sed -e "s|${WIN32PREFIX}||g")
 							if [ ! -d ${FILE} ]; then
 								echo "Installing ${FILE}"
+								FILEPATH="$(dirname ${DESTFILE})"
+								if [ "${FILEPATH}" != "." ]; then
+									echo "Creating ${FILEPATH}"
+									mkdir -p "${BUILD_ROOT}${FILEPATH}"
+									if [ "$?" != "0" ]; then
+										echo "Cant create ${FILEPATH}"
+										exit -1
+									fi
+								fi
 								cp "${FILE}" "${BUILD_ROOT}${DESTFILE}"
 								if [ "$?" != "0" ]; then
 									echo "Cant copy ${FILE}"
+									/bin/bash
 									exit -1
 								fi
 							fi
@@ -295,6 +345,7 @@ recipe_build_win32() {
 				"${NSIFILE}"
 		
 		if [ "$?" != "0" ]; then
+			find .
 			echo "Cant build installer"
 			exit -1
 		fi
