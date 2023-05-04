@@ -43,11 +43,27 @@ recipe_build_win32() {
 	mkdir -p ${TOPDIR}/BUILD
 	
 	if [ ! -e ${TOPDIR}/SOURCES ]; then
-		ORIGIN_URL=$(git remote get-url origin)
-		git clone "${ORIGIN_URL}" "${TOPDIR}/SOURCES"
-		if [ "$?" != "0" ]; then
-			exit -1
+	
+		if [ -d .svn ]; then
+		
+			echo "Get from svn"
+			ORIGIN_URL=$(LANG=C svn info | grep ^URL: | cut -d: -f2- | sed -e "s@ @@g")
+		
+			svn checkout "${ORIGIN_URL}" "${TOPDIR}/SOURCES"
+			if [ "$?" != "0" ]; then
+				exit -1
+			fi
+
+		else
+	
+			ORIGIN_URL=$(git remote get-url origin)
+			git clone "${ORIGIN_URL}" "${TOPDIR}/SOURCES"
+			if [ "$?" != "0" ]; then
+				exit -1
+			fi
+
 		fi
+
 	fi
 	
 	pushd ${TOPDIR}/BUILD
@@ -93,58 +109,59 @@ recipe_build_win32() {
 	# Build modules
 	#
 	local libs_to_exclude="
-		advapi32
-		cfgmgr32
-		comctl32
-		comdlg32
-		crypt32
-		d3d8
-		d3d9
-		ddraw
-		dnsapi
-		dsound
-		dwmapi
-		gdi32
-		gdiplus
-		glu32
-		glut32
-		imm32
-		iphlpapi
-		kernel32
-		ksuser
-		mpr
-		mscms
-		mscoree
-		msimg32
-		msvcr71
-		msvcr80
-		msvcr90
-		msvcrt
-		mswsock
-		netapi32
-		odbc32
-		ole32
-		oleacc
-		oleaut32
-		opengl32
-		psapi
-		rpcrt4
-		secur32
-		setupapi
-		shell32
-		shlwapi
-		user32
-		usp10
-		version
-		wininet
-		winmm
-		wldap32
-		ws2_32
-		wsock32
+		advapi32.dll
+		cfgmgr32.dll
+		comctl32.dll
+		comdlg32.dll
+		crypt32.dll
+		d3d8.dll
+		d3d9.dll
+		ddraw.dll
+		dnsapi.dll
+		dsound.dll
+		dwmapi.dll
+		gdi32.dll
+		gdiplus.dll
+		glu32.dll
+		glut32.dll
+		imm32.dll
+		iphlpapi.dll
+		kernel32.dll
+		ksuser.dll
+		mpr.dll
+		mscms.dll
+		mscoree.dll
+		msimg32.dll
+		msvcr71.dll
+		msvcr80.dll
+		msvcr90.dll
+		msvcrt.dll
+		mswsock.dll
+		netapi32.dll
+		odbc32.dll
+		ole32.dll
+		oleacc.dll
+		oleaut32.dll
+		opengl32.dll
+		psapi.dll
+		rpcrt4.dll
+		secur32.dll
+		setupapi.dll
+		shell32.dll
+		shlwapi.dll
+		user32.dll
+		usp10.dll
+		version.dll
+		wininet.dll
+		winmm.dll
+		wldap32.dll
+		ws2_32.dll
+		wsock32.dll
 		winspool.drv
-		ntdll
-		winhttp
-		wtsapi32
+		ntdll.dll
+		winhttp.dll
+		hid.dll
+		bcrypt.dll
 	"
 	
 	#
@@ -359,7 +376,6 @@ recipe_build_win32() {
 
 		pushd ${BUILD_ROOT}
 		zip -9 "${ZIPNAME}" bin/*.dll bin/*.exe
-		zip -9 -r "${ZIPNAME}" etc/* 
 		if [ "$?" != "0" ]; then
 			echo "Cant build zip"
 			exit -1
@@ -372,6 +388,7 @@ recipe_build_win32() {
 				exit -1
 			fi
 		fi 
+
 		if [ -d share ]; then
 			zip -9 -r "${ZIPNAME}" share/* 
 			if [ "$?" != "0" ]; then
@@ -379,6 +396,7 @@ recipe_build_win32() {
 				exit -1
 			fi
 		fi 
+
 		if [ -d lib ]; then
 			zip -9 -r "${ZIPNAME}" lib/* 
 			if [ "$?" != "0" ]; then
